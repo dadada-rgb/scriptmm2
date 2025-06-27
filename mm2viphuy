@@ -336,6 +336,36 @@ RunService.RenderStepped:Connect(function()
 	updateDroppedGunESP()
 end)
 
+RunService.RenderStepped:Connect(function(deltaTime)
+	updateESP()
+	updateDroppedGunESP()
+
+	if macroEnabled then
+		local char = LocalPlayer.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+		if hum and hrp then
+			local holdingTool = false
+			for _, tool in pairs(char:GetChildren()) do
+				if tool:IsA("Tool") then
+					holdingTool = true
+					break
+				end
+			end
+
+			if holdingTool then
+				local now = tick()
+				if now - lastStep >= 0.04 then -- 0.04s ≈ 25 FPS bước đi
+					lastStep = now
+				else
+					hrp.Velocity = Vector3.new(0, hrp.Velocity.Y, 0)
+				end
+			end
+		end
+	end
+end)
+
 Players.PlayerAdded:Connect(function(plr)
 	plr.CharacterAdded:Connect(function()
 		task.wait(1)
