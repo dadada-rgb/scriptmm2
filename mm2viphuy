@@ -738,3 +738,94 @@ button.MouseButton1Click:Connect(function()
 	if dragging then return end
 	toggleLag()
 end)
+
+-- Chỉ mobile mới hiện
+if UserInputService.TouchEnabled then
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "FakeKnifeMobileGUI"
+	gui.ResetOnSpawn = false
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	-- Tạo nút nhỏ
+	local fakeKnifeButton = Instance.new("TextButton")
+	fakeKnifeButton.Size = UDim2.new(0, 90, 0, 30)
+	fakeKnifeButton.Position = UDim2.new(0, 20, 1, -150)
+	fakeKnifeButton.AnchorPoint = Vector2.new(0, 0)
+	fakeKnifeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	fakeKnifeButton.TextColor3 = Color3.new(1, 1, 1)
+	fakeKnifeButton.Font = Enum.Font.GothamBold
+	fakeKnifeButton.TextSize = 12
+	fakeKnifeButton.Text = "🎭 Dao Giả"
+	fakeKnifeButton.AutoButtonColor = true
+	fakeKnifeButton.Parent = gui
+
+	local UICorner = Instance.new("UICorner", fakeKnifeButton)
+	UICorner.CornerRadius = UDim.new(0, 6)
+
+	-- Cho phép kéo nút
+	local dragging = false
+	local dragStart, startPos
+
+	local function updateDrag(input)
+		local delta = input.Position - dragStart
+		fakeKnifeButton.Position = UDim2.new(
+			0, startPos.X.Offset + delta.X,
+			0, startPos.Y.Offset + delta.Y
+		)
+	end
+
+	fakeKnifeButton.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = fakeKnifeButton.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	fakeKnifeButton.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch and dragging then
+			updateDrag(input)
+		end
+	end)
+
+	-- Bấm để tạo / xoá dao giả
+	local function toggleFakeKnife()
+		local character = player.Character
+		if not character then return end
+		local backpack = player:FindFirstChild("Backpack")
+		if not backpack then return end
+
+		-- Nếu đã có thì xóa
+		if character:FindFirstChild("FakeKnife") then
+			character:FindFirstChild("FakeKnife"):Destroy()
+			return
+		end
+		if backpack:FindFirstChild("FakeKnife") then
+			backpack:FindFirstChild("FakeKnife"):Destroy()
+			return
+		end
+
+		-- Tạo tool
+		local tool = Instance.new("Tool")
+		tool.Name = "FakeKnife"
+		tool.RequiresHandle = true
+		tool.CanBeDropped = false
+
+		local handle = Instance.new("Part")
+		handle.Name = "Handle"
+		handle.Size = Vector3.new(1, 1, 3)
+		handle.BrickColor = BrickColor.new("Bright red")
+		handle.Material = Enum.Material.Neon
+		handle.Parent = tool
+
+		tool.Parent = backpack
+	end
+
+	fakeKnifeButton.MouseButton1Click:Connect(toggleFakeKnife)
+end
