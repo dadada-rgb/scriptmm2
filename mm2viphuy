@@ -526,8 +526,27 @@ if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
 
 	-- Gọi shoot khi nhấn
 	mobileShootBtn.MouseButton1Click:Connect(function()
-		shootMurderer()
+	local char = player.Character
+	local backpack = player:FindFirstChild("Backpack")
+	if not char or not backpack then return end
+
+	-- Bước 1: Equip súng nếu có
+	local gun = char:FindFirstChild("Gun") or char:FindFirstChild("Revolver") or backpack:FindFirstChild("Gun") or backpack:FindFirstChild("Revolver")
+	if gun then
+		player.Character.Humanoid:EquipTool(gun)
+	end
+
+	-- Bước 2: Gọi shoot ngay sau khi equip
+	shootMurderer()
+
+	-- Bước 3: Delay 0.1 giây
+	task.delay(0.1, function()
+		-- Bước 4: Giả lập bấm phím số 4 (như PC)
+		local virtualInput = game:GetService("VirtualInputManager")
+		virtualInput:SendKeyEvent(true, Enum.KeyCode.Four, false, game)
+		virtualInput:SendKeyEvent(false, Enum.KeyCode.Four, false, game)
 	end)
+end)
 
 	-- Tính năng kéo nút
 	local dragging = false
