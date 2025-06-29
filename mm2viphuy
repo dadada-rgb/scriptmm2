@@ -1,185 +1,198 @@
--- Roblox Lua Script for a Universal Menu GUI
--- Supports PC and Mobile
--- Author: vhuy
+--// MAIN GUI SYSTEM FOR MM2 (Mobile + PC)
+--// Author: vhuy
+--// Features: ESP toggle, AutoShoot button (drag, mobile/PC), AntiBan, Lag Reducer, Smooth Menu Animation
+--// Compatible with both PC and Mobile
 
--- Services
 local Players = game:GetService("Players")
-local StarterGui = game:GetService("StarterGui")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
-local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-local playerGui = player:WaitForChild("PlayerGui")
-
--- Remove dropped guns and fake knives
-game:GetService("Workspace"):FindFirstChild("GunDrop"):Destroy()
-for _, obj in pairs(workspace:GetDescendants()) do
-	if obj:IsA("Tool") and (obj.Name == "FakeKnife" or obj.Name == "GunDrop") then
-		obj:Destroy()
-	end
-end
-
--- Menu GUI
-local menuGui = Instance.new("ScreenGui")
-menuGui.Name = "MenuGui"
-menuGui.ResetOnSpawn = false
-menuGui.Parent = playerGui
-menuGui.Enabled = false
-
--- Toggle Button
-local toggleButton = Instance.new("ImageButton")
-toggleButton.Name = "ToggleButton"
-toggleButton.Size = UDim2.new(0, 50, 0, 50)
-toggleButton.Position = UDim2.new(0, 20, 0.5, -25)
-toggleButton.BackgroundTransparency = 1
-toggleButton.Image = "rbxassetid://6031091005" -- example icon
-
-toggleButton.Parent = menuGui
-
--- Draggable Toggle
-local function makeDraggable(gui)
-	local dragging, offset
-	gui.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			offset = input.Position - gui.AbsolutePosition
-		end
-	end)
-	gui.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = false
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-			gui.Position = UDim2.new(0, input.Position.X - offset.X, 0, input.Position.Y - offset.Y)
-		end
-	end)
-end
-makeDraggable(toggleButton)
-
--- Menu Frame
-local frame = Instance.new("Frame")
-frame.Name = "MainMenu"
-frame.Size = UDim2.new(0, 250, 0, 300)
-frame.Position = UDim2.new(0.5, -125, 0.5, -150)
-frame.AnchorPoint = Vector2.new(0.5, 0.5)
-frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-frame.BorderSizePixel = 0
-frame.BackgroundTransparency = 0.1
-frame.Visible = false
-frame.Parent = menuGui
-
-makeDraggable(frame)
-
--- UI Corner
-local function roundify(obj, radius)
-	local uiCorner = Instance.new("UICorner")
-	uiCorner.CornerRadius = UDim.new(0, radius)
-	uiCorner.Parent = obj
-end
-roundify(toggleButton, 25)
-roundify(frame, 20)
-
--- Title
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 40)
-title.BackgroundTransparency = 1
-title.Text = "Script Made by vhuy"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.Parent = frame
-
--- Function to create toggle buttons
-local function createButton(name, yOffset, callback)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0.8, 0, 0, 30)
-	btn.Position = UDim2.new(0.1, 0, 0, yOffset)
-	btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	btn.Text = name
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 16
-	roundify(btn, 10)
-	btn.Parent = frame
-	btn.MouseButton1Click:Connect(callback)
-	return btn
-end
-
--- Features
-local espEnabled = false
-createButton("Toggle ESP", 50, function()
-	espEnabled = not espEnabled
-	print("ESP:", espEnabled)
-	-- Add your ESP logic here
+--// AntiBan Placeholder
+pcall(function()
+    hookfunction(getfenv, function() return nil end)
+    setreadonly(debug.getregistry(), true)
 end)
 
-local autoshootButtonVisible = false
-local autoshootBtn
+--// UI Creation
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "MM2VhuyMenu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-createButton("Create AutoShoot Button", 90, function()
-	if not autoshootButtonVisible then
-		autoshootBtn = Instance.new("TextButton")
-		autoshootBtn.Size = UDim2.new(0, 60, 0, 60)
-		autoshootBtn.Position = UDim2.new(0.5, -30, 0.8, 0)
-		autoshootBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-		autoshootBtn.Text = "🔫"
-		autoshootBtn.Font = Enum.Font.SourceSansBold
-		autoshootBtn.TextSize = 24
-		autoshootBtn.TextColor3 = Color3.new(1, 1, 1)
-		roundify(autoshootBtn, 30)
-		makeDraggable(autoshootBtn)
-		autoshootBtn.Parent = menuGui
+local MenuToggle = Instance.new("ImageButton")
+MenuToggle.Size = UDim2.new(0, 60, 0, 60)
+MenuToggle.Position = UDim2.new(0, 20, 0.5, -30)
+MenuToggle.BackgroundTransparency = 1
+MenuToggle.Image = "rbxassetid://6031091002" -- Example icon
+MenuToggle.Name = "MenuToggle"
+MenuToggle.Parent = ScreenGui
 
-		autoshootBtn.MouseButton1Click:Connect(function()
-			local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
-			if not tool or not (tool.Name == "Gun" or tool.Name == "gun") then
-				StarterGui:SetCore("SendNotification", {
-					Title = "AutoShoot",
-					Text = "Không có súng!",
-					Duration = 2
-				})
-				return
-			end
-			print("AutoShoot activated")
-			-- Add autoshoot logic here
-		end)
-		autoshootButtonVisible = true
+local Drag = false
+local offset
+MenuToggle.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		Drag = true
+		offset = input.Position - MenuToggle.AbsolutePosition
+	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		Drag = false
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if Drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		MenuToggle.Position = UDim2.new(0, input.Position.X - offset.X, 0, input.Position.Y - offset.Y)
 	end
 end)
 
-createButton("Reduce Lag", 130, function()
-	for _, obj in pairs(workspace:GetDescendants()) do
-		if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Fire") then
-			obj.Enabled = false
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BackgroundTransparency = 1
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
+MainFrame.ClipsDescendants = true
+MainFrame.Name = "MainMenu"
+
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 15)
+
+-- Rainbow UI Stroke for border
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+UIStroke.Thickness = 2
+spawn(function()
+	while true do
+		for i = 0, 1, 0.01 do
+			UIStroke.Color = Color3.fromHSV(i, 1, 1)
+			wait()
 		end
 	end
-	print("Lag reduced")
 end)
 
--- Toggle menu
+-- Toggle menu visibility with animation
 local function toggleMenu()
-	frame.Visible = not frame.Visible
+	if MainFrame.Visible then
+		MainFrame:TweenSize(UDim2.new(0, 300, 0, 0), "Out", "Quad", 0.3, true)
+		wait(0.3)
+		MainFrame.Visible = false
+	else
+		MainFrame.Visible = true
+		MainFrame:TweenSize(UDim2.new(0, 300, 0, 350), "Out", "Quad", 0.3, true)
+	end
 end
-
-toggleButton.MouseButton1Click:Connect(toggleMenu)
-
-UserInputService.InputBegan:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then
+MenuToggle.MouseButton1Click:Connect(toggleMenu)
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if not gpe and input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.LeftControl then
 		toggleMenu()
 	end
 end)
 
--- Fade in/out
-menuGui:GetPropertyChangedSignal("Enabled"):Connect(function()
-	if menuGui.Enabled then
-		frame.Visible = true
-	else
-		frame.Visible = false
+-- Text Title
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.Text = "Script made by vhuy"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 20
+Title.TextColor3 = Color3.new(1, 1, 1)
+
+-- Button creation helper
+local function createButton(text, callback)
+	local Button = Instance.new("TextButton")
+	Button.Size = UDim2.new(0.8, 0, 0, 40)
+	Button.Position = UDim2.new(0.1, 0, 0, #MainFrame:GetChildren() * 45)
+	Button.Text = text
+	Button.Font = Enum.Font.Gotham
+	Button.TextSize = 18
+	Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	Button.TextColor3 = Color3.new(1, 1, 1)
+	local Corner = Instance.new("UICorner", Button)
+	Corner.CornerRadius = UDim.new(0, 8)
+	Button.Parent = MainFrame
+	Button.MouseButton1Click:Connect(callback)
+end
+
+-- ESP Toggle
+local espEnabled = false
+createButton("Toggle ESP", function()
+	espEnabled = not espEnabled
+	-- add your ESP toggle logic here
+	print("ESP:", espEnabled)
+end)
+
+-- Lag Reducer
+createButton("Reduce Lag", function()
+	for _, v in pairs(workspace:GetDescendants()) do
+		if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") then
+			v.Enabled = false
+		end
 	end
 end)
 
--- Initialize
-menuGui.Enabled = true
+-- Create AutoShoot Button
+createButton("Enable AutoShoot Button", function()
+	if not ScreenGui:FindFirstChild("ShootButton") then
+		local shootButton = Instance.new("ImageButton")
+		shootButton.Name = "ShootButton"
+		shootButton.Size = UDim2.new(0, 60, 0, 60)
+		shootButton.Position = UDim2.new(0.8, 0, 0.7, 0)
+		shootButton.Image = "rbxassetid://6031091002"
+		shootButton.BackgroundTransparency = 0.2
+		shootButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+		shootButton.Parent = ScreenGui
+		local corner = Instance.new("UICorner", shootButton)
+		corner.CornerRadius = UDim.new(1, 0)
+		-- drag shoot button
+		local dragging = false
+		local dragOffset
+		shootButton.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				dragOffset = input.Position - shootButton.AbsolutePosition
+			end
+		end)
+		UserInputService.InputEnded:Connect(function(input)
+			dragging = false
+		end)
+		UserInputService.InputChanged:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				shootButton.Position = UDim2.new(0, input.Position.X - dragOffset.X, 0, input.Position.Y - dragOffset.Y)
+			end
+		end)
+		shootButton.MouseButton1Click:Connect(function()
+			local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+			if tool and tool.Name:lower():find("gun") then
+				-- autoshoot logic
+				mouse1click()
+			else
+				local msg = Instance.new("TextLabel", ScreenGui)
+				msg.Size = UDim2.new(0, 200, 0, 40)
+				msg.Position = UDim2.new(0.5, -100, 0.5, -20)
+				msg.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+				msg.Text = "Không có súng!"
+				msg.TextColor3 = Color3.new(1, 1, 1)
+				msg.Font = Enum.Font.GothamBold
+				msg.TextSize = 20
+				local corner = Instance.new("UICorner", msg)
+				corner.CornerRadius = UDim.new(0, 8)
+				wait(1.5)
+				msg:Destroy()
+			end
+		end)
+	end
+end)
+
+--// TODO: add your other features not mentioned here
+--// You can paste logic for ESP, SilentAim, etc. inside corresponding callbacks
+
+-- Hide dropped gun and fake knife
+for _, v in pairs(workspace:GetDescendants()) do
+	if v:IsA("Tool") and (v.Name:lower():find("gun") or v.Name:lower():find("fake")) then
+		v:Destroy()
+	end
+end
