@@ -488,3 +488,60 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 	task.wait(1)
 	applyHeadless(char)
 end)
+
+-- 🟢 NÚT SHOOT TRÊN MÀN HÌNH (CUỐI SCRIPT)
+local mobileGui = Instance.new("ScreenGui")
+mobileGui.Name = "ShootButtonGui"
+mobileGui.ResetOnSpawn = false
+mobileGui.IgnoreGuiInset = true
+mobileGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+mobileGui.Parent = game:GetService("CoreGui")
+
+local shootButton = Instance.new("ImageButton")
+shootButton.Size = UDim2.new(0, 60, 0, 60)
+shootButton.Position = UDim2.new(1, -80, 1, -120) -- góc phải dưới
+shootButton.AnchorPoint = Vector2.new(0.5, 0.5)
+shootButton.BackgroundTransparency = 1
+shootButton.Image = "rbxassetid://3570695787" -- hình tròn
+shootButton.ImageColor3 = Color3.fromRGB(255, 80, 80)
+shootButton.Parent = mobileGui
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(1, 0, 1, 0)
+label.Position = UDim2.new(0, 0, 0, 0)
+label.BackgroundTransparency = 1
+label.Text = "Shoot"
+label.TextScaled = true
+label.Font = Enum.Font.GothamBold
+label.TextColor3 = Color3.new(1, 1, 1)
+label.Parent = shootButton
+
+-- Cho phép kéo nút
+local dragging = false
+local offset = Vector2.new()
+
+shootButton.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		offset = input.Position - shootButton.AbsolutePosition
+	end
+end)
+
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+		local newPos = input.Position - offset
+		shootButton.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
+	end
+end)
+
+-- Gọi hàm bắn khi ấn nút
+shootButton.MouseButton1Click:Connect(function()
+	shootMurderer()
+end)
+
