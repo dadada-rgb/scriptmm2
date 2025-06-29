@@ -1,198 +1,490 @@
---// MAIN GUI SYSTEM FOR MM2 (Mobile + PC)
---// Author: vhuy
---// Features: ESP toggle, AutoShoot button (drag, mobile/PC), AntiBan, Lag Reducer, Smooth Menu Animation
---// Compatible with both PC and Mobile
-
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local player = Players.LocalPlayer
+
 local LocalPlayer = Players.LocalPlayer
+local DEFAULT_SPEED = 17
+local MACRO_SPEED_BONUS = 1.5
+local macroEnabled = false
+local fakeKnifeSpawned = false
 
---// AntiBan Placeholder
-pcall(function()
-    hookfunction(getfenv, function() return nil end)
-    setreadonly(debug.getregistry(), true)
+-- Tạo dao fake
+local function giveFakeTool()
+	local backpack = LocalPlayer:WaitForChild("Backpack")
+	if backpack:FindFirstChild("FakeKnife") then return end
+
+	local tool = Instance.new("Tool")
+	tool.Name = "FakeKnife"
+	tool.RequiresHandle = true
+	tool.CanBeDropped = false
+
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.1, 0.1, 0.1)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Anchored = false
+	handle.Massless = true
+	handle.Parent = tool
+
+	tool.Parent = backpack
+end
+
+-- Xoá FakeKnife
+local function removeFakeTool()
+	local character = LocalPlayer.Character
+	local backpack = LocalPlayer:FindFirstChild("Backpack")
+	if character and character:FindFirstChild("FakeKnife") then
+		character.FakeKnife:Destroy()
+	end
+	if backpack and backpack:FindFirstChild("FakeKnife") then
+		backpack.FakeKnife:Destroy()
+	end
+end
+
+-- Cập nhật tốc độ
+local function updateSpeed()
+	local character = LocalPlayer.Character
+	if not character then return end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+
+	local holdingTool = false
+	for _, tool in pairs(character:GetChildren()) do
+		if tool:IsA("Tool") then
+			holdingTool = true
+			break
+		end
+	end
+
+	local speed = DEFAULT_SPEED
+	if macroEnabled and holdingTool then
+		speed = speed + MACRO_SPEED_BONUS
+	end
+
+	humanoid.WalkSpeed = speed
+end
+
+-- Khi nhân vật xuất hiện lại
+LocalPlayer.CharacterAdded:Connect(function(char)
+	task.wait(1)
+	updateSpeed()
+
+	char.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") then
+			updateSpeed()
+		end
+	end)
+
+	char.ChildRemoved:Connect(function(child)
+		if child:IsA("Tool") then
+			updateSpeed()
+		end
+	end)
 end)
 
---// UI Creation
+-- Phím bấm
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+
+	if input.KeyCode == Enum.KeyCode.X then
+		if fakeKnifeSpawned then
+			removeFakeTool()
+			fakeKnifeSpawned = false
+		else
+			giveFakeTool()
+			fakeKnifeSpawned = true
+		end
+	end
+
+	if input.KeyCode == Enum.KeyCode.R then
+		macroEnabled = not macroEnabled
+		updateSpeed()
+		UserInputService.MouseBehavior = macroEnabled and Enum.MouseBehavior.LockCenter or Enum.MouseBehavior.Default
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	-- không cần xử lý ở InputEnded nữa vì R giờ là toggle
+end)
+
+-- Animation Custom Pack
+local Animations = {
+	Idle1 = "rbxassetid://707742142", -- Mage Idle1
+	Idle2 = "rbxassetid://707855907", -- Mage Idle2
+	Jump = "rbxassetid://782847020",  -- Oldschool Jump
+	Fall = "rbxassetid://782846423",  -- Oldschool Fall
+	Walk = "rbxassetid://707897309",  -- Mage Walk
+	Run = "rbxassetid://707861613",   -- Mage Run
+	Climb = "rbxassetid://707826056", -- Mage Climb
+	Swim = "rbxassetid://707876443",  -- Mage Swim
+	SwimIdle = "rbxassetid://707894699", -- Mage SwimIdle
+}
+
+-- Áp dụng animation khi nhân vật xuất hiện
+local function applyCustomAnimations(character)
+	local animate = character:WaitForChild("Animate", 5)
+	if not animate then return end
+	animate.idle.Animation1.AnimationId = Animations.Idle1
+	animate.idle.Animation2.AnimationId = Animations.Idle2
+	animate.jump.JumpAnim.AnimationId = Animations.Jump
+	animate.fall.FallAnim.AnimationId = Animations.Fall
+	animate.walk.WalkAnim.AnimationId = Animations.Walk
+	animate.run.RunAnim.AnimationId = Animations.Run
+	animate.climb.ClimbAnim.AnimationId = Animations.Climb
+	animate.swim.Swim.AnimationId = Animations.Swim
+	animate.swimidle.SwimIdle.AnimationId = Animations.SwimIdle
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+	task.wait(1)
+	local humanoid = char:WaitForChild("Humanoid")
+
+	-- Tăng tốc độ tùy theo tool đang cầm
+	updateSpeed()
+
+	-- Khi cầm hoặc thả tool sẽ tự cập nhật tốc độ
+	char.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") then
+			updateSpeed()
+		end
+	end)
+	char.ChildRemoved:Connect(function(child)
+		if child:IsA("Tool") then
+			updateSpeed()
+		end
+	end)
+
+	-- Áp dụng animation
+	applyCustomAnimations(char)
+
+	-- Tạo ESP cho người chơi khác
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer and espEnabled then
+			createESP(plr, getToolStatus(plr))
+		end
+	end
+end)
+
+-- ESP / Auto Shoot / Zoom (giữ nguyên từ bạn)
+local espData = {}
+local espEnabled = true
+local Colors = {
+	knife = Color3.fromRGB(255, 80, 80),
+	gun = Color3.fromRGB(80, 180, 255),
+	none = Color3.fromRGB(80, 255, 80),
+}
+
+local shootOffset = 2.8
+local autoShooting = false
+
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "MM2VhuyMenu"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Name = "MM2_GUI"
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 200, 0, 100)
+Frame.Position = UDim2.new(0, 20, 0.5, -50)
+Frame.BackgroundTransparency = 0.2
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+Frame.Visible = false
 
-local MenuToggle = Instance.new("ImageButton")
-MenuToggle.Size = UDim2.new(0, 60, 0, 60)
-MenuToggle.Position = UDim2.new(0, 20, 0.5, -30)
-MenuToggle.BackgroundTransparency = 1
-MenuToggle.Image = "rbxassetid://6031091002" -- Example icon
-MenuToggle.Name = "MenuToggle"
-MenuToggle.Parent = ScreenGui
+local UIListLayout = Instance.new("UIListLayout", Frame)
+UIListLayout.FillDirection = Enum.FillDirection.Vertical
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
 
-local Drag = false
-local offset
-MenuToggle.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		Drag = true
-		offset = input.Position - MenuToggle.AbsolutePosition
-	end
-end)
-UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		Drag = false
-	end
-end)
-UserInputService.InputChanged:Connect(function(input)
-	if Drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		MenuToggle.Position = UDim2.new(0, input.Position.X - offset.X, 0, input.Position.Y - offset.Y)
-	end
-end)
+function createButton(text, callback)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -10, 0, 30)
+	btn.Position = UDim2.new(0, 5, 0, 0)
+	btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = Enum.Font.GothamSemibold
+	btn.TextSize = 14
+	btn.Text = text
+	btn.Visible = false
+	btn.Parent = Frame
+	btn.MouseButton1Click:Connect(callback)
+end
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.BackgroundTransparency = 1
-MainFrame.BorderSizePixel = 0
-MainFrame.Visible = false
-MainFrame.Parent = ScreenGui
-MainFrame.ClipsDescendants = true
-MainFrame.Name = "MainMenu"
-
-local UICorner = Instance.new("UICorner", MainFrame)
-UICorner.CornerRadius = UDim.new(0, 15)
-
--- Rainbow UI Stroke for border
-local UIStroke = Instance.new("UIStroke", MainFrame)
-UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-UIStroke.Thickness = 2
-spawn(function()
-	while true do
-		for i = 0, 1, 0.01 do
-			UIStroke.Color = Color3.fromHSV(i, 1, 1)
-			wait()
+function getToolStatus(player)
+	if not player.Character then return "none" end
+	for _, tool in ipairs(player.Character:GetChildren()) do
+		if tool:IsA("Tool") then
+			local name = tool.Name:lower()
+			if name:find("knife") then return "knife" end
+			if name:find("gun") then return "gun" end
 		end
 	end
-end)
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if backpack then
+		for _, tool in ipairs(backpack:GetChildren()) do
+			if tool:IsA("Tool") then
+				local name = tool.Name:lower()
+				if name:find("knife") then return "knife" end
+				if name:find("gun") then return "gun" end
+			end
+		end
+	end
+	return "none"
+end
 
--- Toggle menu visibility with animation
-local function toggleMenu()
-	if MainFrame.Visible then
-		MainFrame:TweenSize(UDim2.new(0, 300, 0, 0), "Out", "Quad", 0.3, true)
-		wait(0.3)
-		MainFrame.Visible = false
+function createESP(player, status)
+	if not espEnabled or not player.Character then return end
+	local head = player.Character:FindFirstChild("Head")
+	if not head then return end
+	local existing = head:FindFirstChild("NameTagESP")
+	if existing then existing:Destroy() end
+	local bb = Instance.new("BillboardGui", head)
+	bb.Name = "NameTagESP"
+	bb.Size = UDim2.new(0, 100, 0, 40)
+	bb.StudsOffset = Vector3.new(0, 2.5, 0)
+	bb.AlwaysOnTop = true
+	bb.Adornee = head
+	local label = Instance.new("TextLabel", bb)
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.TextScaled = true
+	label.Font = Enum.Font.GothamBold
+	label.TextStrokeTransparency = 0.4
+	if status == "knife" then
+		label.Text = "🔪 " .. player.Name
+		label.TextColor3 = Colors.knife
+	elseif status == "gun" then
+		label.Text = "🔫 " .. player.Name
+		label.TextColor3 = Colors.gun
 	else
-		MainFrame.Visible = true
-		MainFrame:TweenSize(UDim2.new(0, 300, 0, 350), "Out", "Quad", 0.3, true)
+		label.Text = player.Name
+		label.TextColor3 = Colors.none
 	end
-end
-MenuToggle.MouseButton1Click:Connect(toggleMenu)
-UserInputService.InputBegan:Connect(function(input, gpe)
-	if not gpe and input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.LeftControl then
-		toggleMenu()
-	end
-end)
-
--- Text Title
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundTransparency = 1
-Title.Text = "Script made by vhuy"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.TextColor3 = Color3.new(1, 1, 1)
-
--- Button creation helper
-local function createButton(text, callback)
-	local Button = Instance.new("TextButton")
-	Button.Size = UDim2.new(0.8, 0, 0, 40)
-	Button.Position = UDim2.new(0.1, 0, 0, #MainFrame:GetChildren() * 45)
-	Button.Text = text
-	Button.Font = Enum.Font.Gotham
-	Button.TextSize = 18
-	Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	Button.TextColor3 = Color3.new(1, 1, 1)
-	local Corner = Instance.new("UICorner", Button)
-	Corner.CornerRadius = UDim.new(0, 8)
-	Button.Parent = MainFrame
-	Button.MouseButton1Click:Connect(callback)
+	local hl = player.Character:FindFirstChild("ESPHighlight")
+	if hl then hl:Destroy() end
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "ESPHighlight"
+	highlight.FillColor = Colors[status]
+	highlight.FillTransparency = 0.7
+	highlight.OutlineTransparency = 0.1
+	highlight.OutlineColor = Colors[status]
+	highlight.Adornee = player.Character
+	highlight.Parent = player.Character
+	espData[player] = status
 end
 
--- ESP Toggle
-local espEnabled = false
-createButton("Toggle ESP", function()
-	espEnabled = not espEnabled
-	-- add your ESP toggle logic here
-	print("ESP:", espEnabled)
+function removeESP(player)
+	if not player.Character then return end
+	local head = player.Character:FindFirstChild("Head")
+	if head then
+		local bb = head:FindFirstChild("NameTagESP")
+		if bb then bb:Destroy() end
+	end
+	local hl = player.Character:FindFirstChild("ESPHighlight")
+	if hl then hl:Destroy() end
+	espData[player] = nil
+end
+
+function updateESP()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer then
+			if espEnabled then
+				local status = getToolStatus(plr)
+				if espData[plr] ~= status then
+					removeESP(plr)
+					createESP(plr, status)
+				end
+			else
+				removeESP(plr)
+			end
+		end
+	end
+end
+
+RunService.RenderStepped:Connect(updateESP)
+
+function updateDroppedGunESP()
+	for _, tool in ipairs(workspace:GetChildren()) do
+		if tool:IsA("Tool") and tool.Name == "Gun" then
+			local handle = tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("Part")
+			if handle and not handle:FindFirstChild("DroppedGunESP") then
+				local bb = Instance.new("BillboardGui")
+				bb.Name = "DroppedGunESP"
+				bb.Size = UDim2.new(0, 100, 0, 40)
+				bb.StudsOffset = Vector3.new(0, 2.5, 0)
+				bb.AlwaysOnTop = true
+				bb.Adornee = handle
+				bb.Parent = handle
+
+				local label = Instance.new("TextLabel")
+				label.Size = UDim2.new(1, 0, 1, 0)
+				label.BackgroundTransparency = 1
+				label.TextScaled = true
+				label.Font = Enum.Font.GothamBold
+				label.TextStrokeTransparency = 0.4
+				label.TextColor3 = Color3.fromRGB(255, 255, 0)
+				label.Text = "🔫 Dropped Gun"
+				label.Parent = bb
+			end
+		end
+	end
+end
+
+RunService.RenderStepped:Connect(function()
+	updateDroppedGunESP()
 end)
 
--- Lag Reducer
-createButton("Reduce Lag", function()
-	for _, v in pairs(workspace:GetDescendants()) do
-		if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") then
-			v.Enabled = false
+RunService.RenderStepped:Connect(function(deltaTime)
+	updateESP()
+	updateDroppedGunESP()
+
+	if macroEnabled then
+		local char = LocalPlayer.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+		if hum and hrp then
+			local holdingTool = false
+			for _, tool in pairs(char:GetChildren()) do
+				if tool:IsA("Tool") then
+					holdingTool = true
+					break
+				end
+			end
+
+			if holdingTool then
+				local now = tick()
+				if now - lastStep >= 0.04 then -- 0.04s ≈ 25 FPS bước đi
+					lastStep = now
+				else
+					hrp.Velocity = Vector3.new(0, hrp.Velocity.Y, 0)
+				end
+			end
 		end
 	end
 end)
 
--- Create AutoShoot Button
-createButton("Enable AutoShoot Button", function()
-	if not ScreenGui:FindFirstChild("ShootButton") then
-		local shootButton = Instance.new("ImageButton")
-		shootButton.Name = "ShootButton"
-		shootButton.Size = UDim2.new(0, 60, 0, 60)
-		shootButton.Position = UDim2.new(0.8, 0, 0.7, 0)
-		shootButton.Image = "rbxassetid://6031091002"
-		shootButton.BackgroundTransparency = 0.2
-		shootButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-		shootButton.Parent = ScreenGui
-		local corner = Instance.new("UICorner", shootButton)
-		corner.CornerRadius = UDim.new(1, 0)
-		-- drag shoot button
-		local dragging = false
-		local dragOffset
-		shootButton.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				dragging = true
-				dragOffset = input.Position - shootButton.AbsolutePosition
+Players.PlayerAdded:Connect(function(plr)
+	plr.CharacterAdded:Connect(function()
+		task.wait(1)
+		if espEnabled then
+			createESP(plr, getToolStatus(plr))
+		end
+	end)
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+	task.wait(1)
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer then
+			if espEnabled then
+				createESP(plr, getToolStatus(plr))
 			end
-		end)
-		UserInputService.InputEnded:Connect(function(input)
-			dragging = false
-		end)
-		UserInputService.InputChanged:Connect(function(input)
-			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-				shootButton.Position = UDim2.new(0, input.Position.X - dragOffset.X, 0, input.Position.Y - dragOffset.Y)
-			end
-		end)
-		shootButton.MouseButton1Click:Connect(function()
-			local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
-			if tool and tool.Name:lower():find("gun") then
-				-- autoshoot logic
-				mouse1click()
-			else
-				local msg = Instance.new("TextLabel", ScreenGui)
-				msg.Size = UDim2.new(0, 200, 0, 40)
-				msg.Position = UDim2.new(0.5, -100, 0.5, -20)
-				msg.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-				msg.Text = "Không có súng!"
-				msg.TextColor3 = Color3.new(1, 1, 1)
-				msg.Font = Enum.Font.GothamBold
-				msg.TextSize = 20
-				local corner = Instance.new("UICorner", msg)
-				corner.CornerRadius = UDim.new(0, 8)
-				wait(1.5)
-				msg:Destroy()
-			end
-		end)
+		end
 	end
 end)
 
---// TODO: add your other features not mentioned here
---// You can paste logic for ESP, SilentAim, etc. inside corresponding callbacks
-
--- Hide dropped gun and fake knife
-for _, v in pairs(workspace:GetDescendants()) do
-	if v:IsA("Tool") and (v.Name:lower():find("gun") or v.Name:lower():find("fake")) then
-		v:Destroy()
+function findMurderer()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer and getToolStatus(plr) == "knife" then
+			return plr
+		end
 	end
 end
+
+function shootMurderer()
+	local murderer = findMurderer()
+	if not murderer then return end
+	local char = LocalPlayer.Character
+	if not char or not char:FindFirstChild("Gun") then return end
+	local murdererHRP = murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart")
+	if not murdererHRP then return end
+	local predicted = murdererHRP.Position + murdererHRP.AssemblyLinearVelocity * Vector3.new(1, 0.5, 1) * (shootOffset / 15)
+	char.Gun.KnifeLocal.CreateBeam.RemoteFunction:InvokeServer(1, predicted, "AH2")
+end
+
+function toggleAutoShoot()
+	autoShooting = not autoShooting
+	if not autoShooting then return end
+	while autoShooting do
+		task.wait(0.1)
+		local murderer = findMurderer()
+		if not murderer then continue end
+		local hrp = murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart")
+		local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp and myHrp then
+			local dir = (hrp.Position - myHrp.Position).Unit * 999
+			local params = RaycastParams.new()
+			params.FilterDescendantsInstances = {LocalPlayer.Character}
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			local result = workspace:Raycast(myHrp.Position, dir, params)
+			if not result or result.Instance:IsDescendantOf(murderer.Character) then
+				shootMurderer()
+			end
+		end
+	end
+end
+
+createButton("Shoot Murderer", shootMurderer)
+createButton("Auto Shoot Murderer", toggleAutoShoot)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.UserInputType == Enum.UserInputType.MouseButton3 then
+		shootMurderer()
+	elseif input.KeyCode == Enum.KeyCode.V then
+		espEnabled = not espEnabled
+		if not espEnabled then
+			for _, plr in ipairs(Players:GetPlayers()) do
+				if plr ~= LocalPlayer then
+					removeESP(plr)
+				end
+			end
+		else
+			for _, plr in ipairs(Players:GetPlayers()) do
+				if plr ~= LocalPlayer then
+					createESP(plr, getToolStatus(plr))
+				end
+			end
+		end
+	end
+end)
+
+-- Headless khi vào game: xóa đầu, mặt, tóc và phụ kiện trên đầu
+local function applyHeadless(character)
+	local head = character:FindFirstChild("Head")
+	if not head then return end
+
+	-- Ẩn đầu và mặt
+	head.Transparency = 1
+	local face = head:FindFirstChildOfClass("Decal")
+	if face then
+		face.Transparency = 1
+	end
+
+	-- Xóa tóc và phụ kiện trên đầu
+	for _, accessory in ipairs(character:GetChildren()) do
+		if accessory:IsA("Accessory") then
+			-- Xóa nếu là tóc
+			if accessory.Name:lower():find("hair") then
+				accessory:Destroy()
+			else
+				local handle = accessory:FindFirstChild("Handle")
+				if handle and handle:IsA("Part") then
+					-- Nếu phụ kiện nằm trên đầu
+					if handle.Position.Y > head.Position.Y + 0.5 then
+						accessory:Destroy()
+					end
+				end
+			end
+		end
+	end
+end
+
+-- Gọi khi nhân vật xuất hiện
+LocalPlayer.CharacterAdded:Connect(function(char)
+	task.wait(1)
+	applyHeadless(char)
+end)
