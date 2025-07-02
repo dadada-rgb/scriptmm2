@@ -118,9 +118,9 @@ local Animations = {
 	Jump = "rbxassetid://782847020",       -- Oldschool Jump (giữ nguyên)
 	Fall = "rbxassetid://782846423",       -- Oldschool Fall (giữ nguyên)
 	Walk = "rbxassetid://707897309",      -- Zombie Walk
-	Run = "rbxassetid://6161636827",       -- Zombie Run
-	Climb = "rbxassetid://707861613",     -- Zombie Climb
-	Swim = "rbxassetid://707826056",      -- Zombie Swim
+	Run = "rbxassetid://707861613",       -- Zombie Run
+	Climb = "rbxassetid://707826056",     -- Zombie Climb
+	Swim = "rbxassetid://707876443",      -- Zombie Swim
 	SwimIdle = "rbxassetid://707894699"   -- Zombie SwimIdle
 }
 -- Áp dụng animation khi nhân vật xuất hiện
