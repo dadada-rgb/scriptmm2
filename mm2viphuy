@@ -113,17 +113,16 @@ end)
 
 -- Animation Custom Pack
 local Animations = {
-	Idle1 = "rbxassetid://707742142", -- Mage Idle1
-	Idle2 = "rbxassetid://707855907", -- Mage Idle2
-	Jump = "rbxassetid://782847020",  -- Oldschool Jump
-	Fall = "rbxassetid://782846423",  -- Oldschool Fall
-	Walk = "rbxassetid://707897309",  -- Mage Walk
-	Run = "rbxassetid://707861613",   -- Mage Run
-	Climb = "rbxassetid://707826056", -- Mage Climb
-	Swim = "rbxassetid://707876443",  -- Mage Swim
-	SwimIdle = "rbxassetid://707894699", -- Mage SwimIdle
+	Idle1 = "rbxassetid://6161589290",   -- Zombie Idle1
+	Idle2 = "rbxassetid://6161603867",   -- Zombie Idle2
+	Jump = "rbxassetid://782847020",     -- Oldschool Jump (giữ nguyên)
+	Fall = "rbxassetid://782846423",     -- Oldschool Fall (giữ nguyên)
+	Walk = "rbxassetid://6161680323",    -- Zombie Walk
+	Run = "rbxassetid://6161636827",     -- Zombie Run
+	Climb = "rbxassetid://6161561191",   -- Zombie Climb
+	Swim = "rbxassetid://6161651097",    -- Zombie Swim
+	SwimIdle = "rbxassetid://6161666550" -- Zombie SwimIdle
 }
-
 -- Áp dụng animation khi nhân vật xuất hiện
 local function applyCustomAnimations(character)
 	local animate = character:WaitForChild("Animate", 5)
