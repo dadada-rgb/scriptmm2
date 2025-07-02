@@ -113,15 +113,15 @@ end)
 
 -- Animation Custom Pack
 local Animations = {
-	Idle1 = "rbxassetid://6161589290",   -- Zombie Idle1
-	Idle2 = "rbxassetid://6161603867",   -- Zombie Idle2
-	Jump = "rbxassetid://782847020",     -- Oldschool Jump (giữ nguyên)
-	Fall = "rbxassetid://782846423",     -- Oldschool Fall (giữ nguyên)
-	Walk = "rbxassetid://6161680323",    -- Zombie Walk
-	Run = "rbxassetid://6161636827",     -- Zombie Run
-	Climb = "rbxassetid://6161561191",   -- Zombie Climb
-	Swim = "rbxassetid://6161651097",    -- Zombie Swim
-	SwimIdle = "rbxassetid://6161666550" -- Zombie SwimIdle
+	Idle1 = "rbxassetid://6161589290",     -- Zombie Idle
+	Idle2 = "rbxassetid://6161603867",     -- Zombie Idle (có thể dùng chung với Idle1)
+	Jump = "rbxassetid://782847020",       -- Oldschool Jump (giữ nguyên)
+	Fall = "rbxassetid://782846423",       -- Oldschool Fall (giữ nguyên)
+	Walk = "rbxassetid://6161680323",      -- Zombie Walk
+	Run = "rbxassetid://6161636827",       -- Zombie Run
+	Climb = "rbxassetid://6161561191",     -- Zombie Climb
+	Swim = "rbxassetid://6161651097",      -- Zombie Swim
+	SwimIdle = "rbxassetid://6161666550"   -- Zombie SwimIdle
 }
 -- Áp dụng animation khi nhân vật xuất hiện
 local function applyCustomAnimations(character)
