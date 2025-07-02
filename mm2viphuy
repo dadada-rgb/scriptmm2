@@ -488,3 +488,46 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 	applyHeadless(char)
 end)
 
+-- Giả lập bấm phím
+local function pressKey(keyCode)
+	local input = Instance.new("InputObject")
+	input.UserInputType = Enum.UserInputType.Keyboard
+	input.KeyCode = keyCode
+	game:GetService("UserInputService").InputBegan:Fire(input, false)
+end
+
+-- Chuột giữa + Gun logic
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+
+	if input.UserInputType == Enum.UserInputType.MouseButton3 then
+		local character = LocalPlayer.Character
+		if not character then return end
+
+		local gunTool = character:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Gun")
+		if gunTool then
+			-- Equip Gun
+			if gunTool.Parent == LocalPlayer.Backpack then
+				LocalPlayer.Character.Humanoid:EquipTool(gunTool)
+				task.wait(0.1)
+			end
+
+			-- Shoot murderer
+			shootMurderer()
+			task.wait(0.15)
+
+			-- Equip Emote/ Biểu cảm tool
+			local emoteTool = LocalPlayer.Backpack:FindFirstChild("Emotes") or LocalPlayer.Backpack:FindFirstChild("Biểu cảm")
+			if emoteTool then
+				LocalPlayer.Character.Humanoid:EquipTool(emoteTool)
+			end
+
+			-- Simulate pressing 4
+			task.wait(0.1)
+			pressKey(Enum.KeyCode.Four)
+		end
+	end
+end)
+
+
+
